@@ -1,4 +1,7 @@
 .env
 *.log
 safety-check-log.json
+positions.json
+trades.csv
 node_modules/
+.claude/

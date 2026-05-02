@@ -1,15 +1,15 @@
 {
   "name": "claude-tradingview-mcp-trading",
-  "version": "1.0.0",
-  "description": "Automated trading bot — Claude + TradingView strategy + BitGet execution",
+  "version": "2.0.0",
+  "description": "MTF Trend Following Trading Bot — paper & live on BitGet",
+  "type": "module",
   "main": "bot.js",
   "scripts": {
     "start": "node bot.js",
     "dev": "node bot.js"
   },
   "dependencies": {
-    "dotenv": "^16.4.5",
-    "node-fetch": "^3.3.2"
+    "dotenv": "^16.4.5"
   },
   "engines": {
     "node": ">=18.0.0"

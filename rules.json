@@ -1,50 +1,88 @@
 {
-  "watchlist": ["BTCUSDT"],
-  "default_timeframe": "1m",
+  "watchlist": [
+    "BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT",
+    "AAVEUSDT", "LINKUSDT", "LTCUSDT", "ATOMUSDT", "BNBUSDT"
+  ],
+  "default_timeframe": "15m",
+  "higher_timeframe": "4h",
 
   "strategy": {
-    "name": "VWAP + RSI(3) + EMA(8) Scalping Strategy",
-    "sources": ["Lewis Jackson"],
-    "description": "Three indicators, each doing a different job. EMA(8) for trend direction, VWAP for session bias, RSI(3) for entry timing. All three must align before a trade fires."
+    "name": "MTF Trend Following Long/Short",
+    "description": "Multi-timeframe trend following. Higher timeframe (4H) sets the bias via EMA(50). Lower timeframe (15m) confirms with structure (HH/HL or LL/LH), volume spike, and candle confirmation. Longs in uptrend, shorts in downtrend. Risk/Reward 1:3."
   },
 
   "indicators": {
-    "ema_8": "Trend direction. Price above EMA(8) = bullish momentum. Below = bearish.",
-    "vwap": "Session bias. Price above VWAP = buyers in control. Below = sellers. Resets at midnight UTC.",
-    "rsi_3": "Entry timing. RSI on 3 candles only — extremely sensitive. Below 30 in an uptrend = snap-back setup. Above 70 in a downtrend = reversal likely."
+    "ema_50_htf": "Higher timeframe trend filter. Price above EMA(50) on 4H = bullish bias. Below = bearish bias.",
+    "ema_50_ltf": "Lower timeframe trend confirmation. Price must align with HTF direction.",
+    "pivot_highs": "Swing highs detected with lookback of 5 bars. Tracks last two to confirm Higher Highs or Lower Highs.",
+    "pivot_lows": "Swing lows detected with lookback of 5 bars. Tracks last two to confirm Higher Lows or Lower Lows.",
+    "volume_sma_20": "20-period SMA of volume. Current candle volume must exceed this by 1.5x to confirm strong participation.",
+    "candle_confirmation": "Bullish: close > open AND close > previous high. Bearish: close < open AND close < previous low."
   },
 
   "bias_criteria": {
-    "bullish": ["Price is above VWAP", "Price is above EMA(8)"],
-    "bearish": ["Price is below VWAP", "Price is below EMA(8)"]
+    "bullish": [
+      "HTF (4H): Price is above EMA(50)",
+      "LTF (15m): Price is above EMA(50)"
+    ],
+    "bearish": [
+      "HTF (4H): Price is below EMA(50)",
+      "LTF (15m): Price is below EMA(50)"
+    ]
   },
 
   "entry_rules": {
     "long": [
-      "Price is above VWAP — buyers in control for the session",
-      "Price is above EMA(8) — uptrend confirmed",
-      "RSI(3) has dropped below 30 — short-term pullback in an uptrend, snap-back likely"
+      "HTF (4H) price is above EMA(50) — uptrend confirmed on higher timeframe",
+      "LTF (15m) price is above EMA(50) — lower timeframe aligned with trend",
+      "Structure: last Higher High > previous Higher High AND last Higher Low > previous Higher Low",
+      "Volume: current candle volume > SMA(20) x 1.5 — strong participation",
+      "Candle: close > open AND close > previous candle high — bullish confirmation"
     ],
     "short": [
-      "Price is below VWAP — sellers in control",
-      "Price is below EMA(8) — downtrend confirmed",
-      "RSI(3) has spiked above 70 — overbought in a downtrend, reversal likely"
+      "HTF (4H) price is below EMA(50) — downtrend confirmed on higher timeframe",
+      "LTF (15m) price is below EMA(50) — lower timeframe aligned with trend",
+      "Structure: last Lower Low < previous Lower Low AND last Lower High < previous Lower High",
+      "Volume: current candle volume > SMA(20) x 1.5 — strong participation",
+      "Candle: close < open AND close < previous candle low — bearish confirmation"
     ]
   },
 
-  "exit_rules": [
-    "Exit when RSI(3) crosses back above 50 (for longs) or below 50 (for shorts)",
-    "Hard stop: 0.3% below entry for longs, 0.3% above entry for shorts",
-    "Take profit at next VWAP touch or EMA(8) cross"
-  ],
+  "exit_rules": {
+    "long": {
+      "stop_loss": "Placed at low of confirmation candle",
+      "take_profit": "Entry price + 2x (entry - stop_loss) — Risk/Reward 1:2"
+    },
+    "short": {
+      "stop_loss": "Placed at high of confirmation candle",
+      "take_profit": "Entry price - 2x (stop_loss - entry) — Risk/Reward 1:2"
+    }
+  },
 
   "risk_rules": [
-    "Risk maximum 1% of portfolio per trade",
+    "Position size: 1% of portfolio per trade",
     "Maximum trade size capped by MAX_TRADE_SIZE_USD in .env",
     "Maximum trades per day capped by MAX_TRADES_PER_DAY in .env",
-    "Do not trade if price is more than 1.5% away from VWAP — overextended",
-    "Paper trade first — validate this strategy on your specific asset before going live"
+    "Do not enter if risk (entry to SL distance) is 0 or negative",
+    "Do not enter if SL distance exceeds 2.0 ATR — stop too wide",
+    "Cooldown: no re-entry for 6 hours after a stop loss hit",
+    "Blackout: no entries at 08h, 13h, 14h UTC — session open false breakouts",
+    "No trading on Saturday (day 6) — low volume, erratic moves",
+    "Only one position at a time per symbol",
+    "Paper trade first — validate on each asset before going live"
   ],
 
-  "notes": "Scalping strategy — designed for 1m to 5m timeframes. RSI(3) is intentionally fast and sensitive. Do not apply to higher timeframes."
+  "parameters": {
+    "ema_length": 50,
+    "pivot_bars": 5,
+    "volume_ma_length": 20,
+    "volume_multiplier": 0,
+    "risk_reward_ratio": 2.0,
+    "htf_range_threshold_pct": 0,
+    "sl_max_atr": 2.0,
+    "cooldown_hours": 6,
+    "blackout_hours_utc": [8, 13, 14],
+    "no_trade_days": [6],
+    "position_size_pct": 1
+  }
 }
